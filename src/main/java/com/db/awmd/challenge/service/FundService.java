@@ -22,12 +22,12 @@ public class FundService {
     public boolean fundTransfer(FundTransfer fundTransfer) {
         boolean transferStatus =  this.accountService.getAccountsRepository().transferFund(fundTransfer);
         if(transferStatus) {
-            this.notificationService.notifyAboutTransfer(this.accountService.getAccount(
+            this.getNotificationService().notifyAboutTransfer(this.accountService.getAccount(
                     fundTransfer.getSenderAccountId()),
-                    " Account debitted with " + fundTransfer.getFund());
-            this.notificationService.notifyAboutTransfer(this.accountService.getAccount(
+                    " Account debited with " + fundTransfer.getFund());
+            this.getNotificationService().notifyAboutTransfer(this.accountService.getAccount(
                     fundTransfer.getReceiverAccountId()),
-                    " Account Creditted with " + fundTransfer.getFund());
+                    " Account Credited with " + fundTransfer.getFund());
         }
         return transferStatus;
     }

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.db.awmd.challenge.exception.InvalidTransactionException;
 import com.db.awmd.challenge.exception.OverDraftNotSuportedException;
 import org.springframework.stereotype.Repository;
 
@@ -42,6 +43,9 @@ public class AccountsRepositoryInMemory implements AccountsRepository {
       throw new AccountNotFoundException("Debiting Account with accountId "+fundTransfer.getSenderAccountId()+" does not available in system");
     if(accounts.get(fundTransfer.getReceiverAccountId()) ==null)
       throw new AccountNotFoundException("Crediting Account with accountId "+fundTransfer.getReceiverAccountId()+" does not available in system");
+    if(fundTransfer.getFund().compareTo(BigDecimal.ZERO)<=0){
+      throw new InvalidTransactionException("Only positive fund transfer supported in system");
+    }
     Account debitingAc;
     synchronized (accounts.get(fundTransfer.getSenderAccountId())){
       if(accounts.get(fundTransfer.getSenderAccountId()).getBalance().subtract(fundTransfer.getFund()).compareTo(BigDecimal.ZERO)<1)

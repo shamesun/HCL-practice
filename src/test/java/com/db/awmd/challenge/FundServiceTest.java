@@ -4,6 +4,7 @@ import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.FundTransfer;
 import com.db.awmd.challenge.exception.AccountNotFoundException;
 import com.db.awmd.challenge.exception.DuplicateAccountIdException;
+import com.db.awmd.challenge.exception.InvalidTransactionException;
 import com.db.awmd.challenge.exception.OverDraftNotSuportedException;
 import com.db.awmd.challenge.repository.AccountsRepository;
 import com.db.awmd.challenge.service.AccountsService;
@@ -25,25 +26,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.*;
+
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class FundServiceTest {
 
-    private final Map<String, Account> accounts = new ConcurrentHashMap<>();
-
-//    @Mock
-//    private AccountsRepository accountsRepository;
 
     @Mock
     private NotificationService notificationService;
-
-//    @InjectMocks
-//    @Autowired
-//    private AccountsService accountService;
-
-//    @InjectMocks
     @Autowired
     private FundService fundService;
     
@@ -57,22 +50,56 @@ public class FundServiceTest {
         Account account1 = new Account("Id-123");
         account1.setBalance(new BigDecimal(500));
        fundService.getAccountService().createAccount(account1);
-        accounts.put(account1.getAccountId(), account1);
 
         Account account2 = new Account("Id-234");
         account2.setBalance(new BigDecimal(100));
         fundService.getAccountService().createAccount(account2);
-        accounts.put(account2.getAccountId(), account2);
     }
 
     @Test
     public void fundTransfer() throws Exception {
+        Mockito.doAnswer(
+                invocation -> {
+                Object[] args = invocation.getArguments();
+                //verifying notification sent only in case of valid transaction
+                assertThat(((Account)args[0]).getBalance()).isPositive();
+                return args;
+                }
+        ).when(notificationService).notifyAboutTransfer(any(Account.class),anyString());
         FundTransfer fundTransfer = new FundTransfer("Id-123","Id-234");
         fundTransfer.setFund(new BigDecimal(400));
         this.fundService.fundTransfer(fundTransfer);
 
         assertThat(fundService.getAccountService().getAccount("Id-123").getBalance()).isEqualTo(new BigDecimal(100));
         assertThat(fundService.getAccountService().getAccount("Id-234").getBalance()).isEqualTo(new BigDecimal(500));
+    }
+    @Test
+    public void fundTransfer_ZeroFundNotSupported() throws Exception {
+        FundTransfer fundTransfer = new FundTransfer("Id-123","Id-234");
+        fundTransfer.setFund(new BigDecimal(0));
+        try {
+            this.fundService.fundTransfer(fundTransfer);
+            fail("Should have failed when transferring 0 fund");
+        } catch (InvalidTransactionException ite) {
+            assertThat(ite.getMessage()).isEqualTo("Only positive fund transfer supported in system");
+        }
+        //verifying the fund is not transferred
+        assertThat(fundService.getAccountService().getAccount("Id-123").getBalance()).isEqualTo(new BigDecimal(500));
+        assertThat(fundService.getAccountService().getAccount("Id-234").getBalance()).isEqualTo(new BigDecimal(100));
+    }
+    @Test
+    public void fundTransfer_NegativeFundNotSupported() throws Exception {
+        FundTransfer fundTransfer = new FundTransfer("Id-123","Id-234");
+        fundTransfer.setFund(new BigDecimal(-100));
+        try {
+            this.fundService.fundTransfer(fundTransfer);
+            fail("Should have failed when transferring -ive fund");
+        } catch (InvalidTransactionException ite) {
+            assertThat(ite.getMessage()).isEqualTo("Only positive fund transfer supported in system");
+        }
+        //verifying the fund is not transferred
+        assertThat(fundService.getAccountService().getAccount("Id-123").getBalance()).isEqualTo(new BigDecimal(500));
+        assertThat(fundService.getAccountService().getAccount("Id-234").getBalance()).isEqualTo(new BigDecimal(100));
     }
 
     @Test
@@ -81,7 +108,7 @@ public class FundServiceTest {
         fundTransfer.setFund(new BigDecimal(600));
         try {
             this.fundService.fundTransfer(fundTransfer);
-            fail("Should have failed when transferring fund then available");
+            fail("Should have failed when transferring fund than available");
         } catch (OverDraftNotSuportedException odnse) {
             assertThat(odnse.getMessage()).isEqualTo("The Debiting Fund 600 from AccountId Id-123 is Not allowed, Due to less balance");
         }
