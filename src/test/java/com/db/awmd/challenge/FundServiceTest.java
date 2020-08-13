@@ -3,17 +3,13 @@ package com.db.awmd.challenge;
 import com.db.awmd.challenge.domain.Account;
 import com.db.awmd.challenge.domain.FundTransfer;
 import com.db.awmd.challenge.exception.AccountNotFoundException;
-import com.db.awmd.challenge.exception.DuplicateAccountIdException;
 import com.db.awmd.challenge.exception.InvalidTransactionException;
 import com.db.awmd.challenge.exception.OverDraftNotSuportedException;
-import com.db.awmd.challenge.repository.AccountsRepository;
-import com.db.awmd.challenge.service.AccountsService;
 import com.db.awmd.challenge.service.FundService;
 import com.db.awmd.challenge.service.NotificationService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -22,13 +18,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
